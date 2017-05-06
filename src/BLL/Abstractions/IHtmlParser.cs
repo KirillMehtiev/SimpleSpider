@@ -6,6 +6,6 @@ namespace BLL.Abstractions
 {
     public interface IHtmlParser
     {
-        ICollection<string> GetLinksFromPage(string page);
+        ICollection<string> GetUrlsFromHtmlATag(string page);
     }
 }
