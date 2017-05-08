@@ -1,7 +1,5 @@
-﻿using BLL.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
+using BLL.Abstractions;
 using DLL.Dtos;
 
 namespace BLL.Services
