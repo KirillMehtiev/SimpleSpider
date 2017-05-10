@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using BLL.Abstractions;
 
-namespace BLL.Test
+namespace BLL.Implementation
 {
     public class Client : IClient
     {
