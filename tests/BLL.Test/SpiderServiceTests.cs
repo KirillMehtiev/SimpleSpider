@@ -17,9 +17,10 @@ namespace BLL.Test
     {
         // Return valid result
         // Can extract base url for all pages
+        // Throw exeption if not valid url
 
         [Fact]
-        public void CanFindAllPageBaseOnGivenUrl()
+        public async Task CanFindAllPageBaseOnGivenUrl()
         {
             var baseUrl = "http://www.example.com";
             var expectedPages = new List<string> {
@@ -48,10 +49,19 @@ namespace BLL.Test
             });
 
             Mock<IUrlFilter> urlFilter = new Mock<IUrlFilter>();
+            urlFilter.Setup(m => m.RemoveUnnecessary(It.IsAny<List<string>>(), It.IsAny<Uri>()))
+                .Returns((ICollection<string> urls, Uri baseUri) =>
+            {
+                return new List<Uri>
+                { new Uri("http://www.example.com"),
+                    new Uri("http://www.example.com/books"),
+                    new Uri("http://www.example.com/books/5")
+                };
+            });
 
             ISpider spider = new Spider(htmlParse.Object, client.Object, urlFilter.Object);
 
-            var result = spider.CrawlWebsite(baseUrl);
+            var result = await spider.CrawlWebsite(baseUrl);
             var actualPages = result.Items.OrderBy(o => o.RequestUrl).ToList();
 
             Assert.Equal(expectedPages.Count, actualPages.Count);
@@ -60,11 +70,26 @@ namespace BLL.Test
                 item => Assert.Equal(expectedPages[1], item.RequestUrl),
                 item => Assert.Equal(expectedPages[2], item.RequestUrl));
         }
+
+        [Fact]
+        public void ThrowExeptionIfProviderUrlNotValid()
+        {
+            var invalidUrl = "www.example.com";
+
+            Mock<IClient> client = new Mock<IClient>();
+            Mock<IHtmlParser> htmlParse = new Mock<IHtmlParser>();
+            Mock<IUrlFilter> urlFilter = new Mock<IUrlFilter>();
+            ISpider spider = new Spider(htmlParse.Object, client.Object, urlFilter.Object);
+
+            var exeption = Record.ExceptionAsync(() => spider.CrawlWebsite(invalidUrl));
+
+            Assert.Equal(typeof(UriFormatException), exeption.GetType());
+        }
     }
 
     internal interface ISpider
     {
-        RecordDto CrawlWebsite(string startUrl);
+        Task<RecordDto> CrawlWebsite(string startUrl);
     }
 
     internal class Spider : ISpider
@@ -79,43 +104,45 @@ namespace BLL.Test
             this.client = client;
             this.urlFilter = urlFilter;
         }
-        
-        public RecordDto CrawlWebsite(string startUrl)
+
+        public async Task<RecordDto> CrawlWebsite(string startUrl)
         {
-            var result = new RecordDto();
-            var calledPaths = new List<string>();
-            var pagesQueue = new Queue<string>();
+            if (!Uri.IsWellFormedUriString(startUrl, UriKind.Absolute))
+                throw new UriFormatException("Url in not valid");
 
-            var url = new Uri(startUrl);
-            var baseUrl = $"{url.Scheme}://{url.Host}";
-            var absolutePath = url.AbsolutePath;
+            var startUri = new Uri(startUrl, UriKind.Absolute);
 
-            pagesQueue.Enqueue(absolutePath);
+            var result = new RecordDto() { Items = new List<RecordItemDto>() };
+            var visitedUri = new List<Uri>();
+            var pagesToBeCalled = new Queue<Uri>();
 
-            while (pagesQueue.Any())
+            pagesToBeCalled.Enqueue(startUri);
+
+            while (pagesToBeCalled.Any())
             {
-                var currentAbsolutePath = pagesQueue.Dequeue();
+                var currentUri = pagesToBeCalled.Dequeue();
 
-                var requestResult = client.GetAsync($"{baseUrl}{currentAbsolutePath}").Result.Content.ReadAsStringAsync();
+                var requestResult = await client.GetAsync(currentUri.AbsoluteUri);
+                var content = await requestResult.Content.ReadAsStringAsync();
 
-                calledPaths.Add(currentAbsolutePath);
+                visitedUri.Add(currentUri);
 
-                var parsedUrls = htmlParser.GetUrlsFromHtmlATag(requestResult.Result);
-                var filteredPaths = urlFilter.ByHostnameAndPathToNewPage(parsedUrls);
+                var parsedUrls = htmlParser.GetUrlsFromHtmlATag(content);
+                var filteredPaths = urlFilter.RemoveUnnecessary(parsedUrls, currentUri);
 
-                foreach (var parsedUrl in filteredPaths)
+                foreach (var parsedUri in filteredPaths)
                 {
-                    if (!calledPaths.Contains(parsedUrl) && parsedUrl != string.Empty)
-                        pagesQueue.Enqueue(parsedUrl);
+                    if (!visitedUri.Contains(parsedUri) && !pagesToBeCalled.Contains(parsedUri))
+                        pagesToBeCalled.Enqueue(parsedUri);
                 }
             }
 
-            result = FactoryMethod(calledPaths);
+            result = FactoryMethod(visitedUri);
 
             return result;
         }
 
-        private RecordDto FactoryMethod(List<string> pagesUrls)
+        private RecordDto FactoryMethod(List<Uri> pagesUrls)
         {
             var result = new RecordDto();
 
@@ -126,7 +153,7 @@ namespace BLL.Test
             {
                 var recordItemDto = new RecordItemDto
                 {
-                    RequestUrl = url
+                    RequestUrl = url.AbsolutePath
                 };
 
                 result.Items.Add(recordItemDto);
@@ -134,6 +161,6 @@ namespace BLL.Test
 
             return result;
         }
-        
+
     }
 }
