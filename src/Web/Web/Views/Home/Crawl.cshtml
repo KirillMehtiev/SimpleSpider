@@ -1,0 +1,17 @@
+﻿@model BLL.Dtos.RecordDto
+
+@{
+    ViewData["Title"] = "Crawl";
+}
+
+
+<div class="row">
+    <div class="col-md-6">
+        <h4>@Model.RequestedUrl </h4>
+        <h5>Pages found: @Model.Items.Count</h5>
+        @foreach (var item in Model.Items)
+        {
+            <p>@item.RequestUrl <span class="pull-right">@item.RequestTime</span></p>
+        }
+    </div>
+</div>
