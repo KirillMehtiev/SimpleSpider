@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace DLL.Dtos
+namespace BLL.Dtos
 {
     public class WebSiteDto
     {

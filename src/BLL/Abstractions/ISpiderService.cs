@@ -1,12 +1,10 @@
-﻿using DLL.Dtos;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using BLL.Dtos;
+using System.Threading.Tasks;
 
 namespace BLL.Abstractions
 {
     public interface ISpiderService
     {
-       RecordDto CrawlWebsite(string startUrl);
+        Task<RecordDto> CrawlWebsiteAsync(string startUrl);
     }
 }
