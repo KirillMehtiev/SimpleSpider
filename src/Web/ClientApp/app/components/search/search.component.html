@@ -2,10 +2,10 @@
 <hr />
 <h4>Just enter an URL to website</h4>
 
-<form action="/" method="post" class="form-inline">
+<div class="form-inline">
     <div class="form-group">
-        <input type="url" name="givenUrl" placeholder="http://www.example.com" class="form-control input-lg" />
+        <input type="url" [(ngModel)]="url" placeholder="http://www.example.com" class="form-control input-lg" />
     </div>
-    <button type="submit" class="btn btn-primary btn-lg">Go!</button>
-</form>
+    <a [routerLink]="['/search-results', url]" class="btn btn-primary btn-lg">Go!</a>
+</div>
 

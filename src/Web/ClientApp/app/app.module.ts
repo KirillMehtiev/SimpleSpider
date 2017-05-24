@@ -1,4 +1,5 @@
 import { NgModule } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { UniversalModule } from 'angular2-universal';
 import { AppComponent } from './components/app/app.component'
@@ -20,13 +21,15 @@ import { SearchResultsComponent } from './components/search-results/search-resul
     ],
     imports: [
         UniversalModule, // Must be first import. This automatically imports BrowserModule, HttpModule, and JsonpModule too.
+        FormsModule,
         RouterModule.forRoot([
             { path: '', redirectTo: 'search', pathMatch: 'full' },
             { path: 'search', component: SearchComponent },
+            { path: 'search-results/:url', component: SearchResultsComponent },
             { path: 'counter', component: CounterComponent },
             { path: 'fetch-data', component: FetchDataComponent },
             { path: '**', redirectTo: 'search' }
-        ])
+        ]),
     ]
 })
 export class AppModule {
