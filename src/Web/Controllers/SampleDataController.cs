@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace Web.Controllers
 {
@@ -38,6 +39,22 @@ namespace Web.Controllers
                 {
                     return 32 + (int)(TemperatureC / 0.5556);
                 }
+            }
+        }
+
+        [HttpGet("[action]")]
+        public async Task Sse()
+        {
+            var response = HttpContext.Response;
+            response.Headers.Add("Content-Type", "text/event-stream");
+
+            for (var i = 0; true; ++i)
+            {
+                await response
+                    .WriteAsync($"data: Controller {i} at {DateTime.Now}\r\r");
+
+                response.Body.Flush();
+                await Task.Delay(5 * 1000);
             }
         }
     }

@@ -6,6 +6,6 @@
     <div class="form-group">
         <input type="url" [(ngModel)]="url" placeholder="http://www.example.com" class="form-control input-lg" />
     </div>
-    <a [routerLink]="['/search-results', url]" class="btn btn-primary btn-lg">Go!</a>
+    <a (click)="find()" class="btn btn-primary btn-lg">Go!</a>
 </div>
 
