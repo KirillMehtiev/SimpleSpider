@@ -5,17 +5,20 @@ import { Component } from '@angular/core';
     templateUrl: './search.component.html'
 })
 export class SearchComponent {
-    public url: string = 'http://www.example.com';
-    public sseUrl: string = 'api/SampleData/Sse';
+    public url: string = 'http://www.collective.com';
+    public sseUrl: string = 'api/SampleData/Sse?url=';
 
     find(event: Event) {
-        
-        let source = new EventSource(this.sseUrl);
+        let source = new EventSource(this.sseUrl + this.url);
 
         source.onmessage = function (event) {
             console.log('onmessage: ' + event.data);
         };
-        
+
+        source.onerror = function (e) {
+            source.close()
+            console.log("EventSource failed.");
+        };
     }
 
 }
