@@ -4,12 +4,24 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using System.Threading.Tasks.Dataflow;
+using BLL.Dtos;
+using BLL.Abstractions;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Web.Controllers
 {
     [Route("api/[controller]")]
     public class SampleDataController : Controller
     {
+        private readonly ISpiderService spiderService;
+
+        public SampleDataController(ISpiderService spiderService)
+        {
+            this.spiderService = spiderService;
+        }
+
         private static string[] Summaries = new[]
         {
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
@@ -43,19 +55,33 @@ namespace Web.Controllers
         }
 
         [HttpGet("[action]")]
-        public async Task Sse()
+        public async Task Sse(string url)
         {
-            var response = HttpContext.Response;
-            response.Headers.Add("Content-Type", "text/event-stream");
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
 
-            for (var i = 0; true; ++i)
+            var response = HttpContext.Response;
+            response.ContentType = "text/event-stream";
+
+            var blockingCollection = new BlockingCollection<RecordItemDto>(100);
+
+            var task = spiderService.CrawlWebsiteAsync(url, blockingCollection);
+
+            foreach (var item in blockingCollection.GetConsumingEnumerable())
             {
                 await response
-                    .WriteAsync($"data: Controller {i} at {DateTime.Now}\r\r");
+                    .WriteAsync($"data: requested {item.RequestUrl} at {item.RequestTime.Milliseconds} ms\r\r");
 
                 response.Body.Flush();
-                await Task.Delay(5 * 1000);
+
+                //await Task.Delay(1000);
             }
+
+            await task;
+            stopwatch.Stop();
+
+            await response
+                    .WriteAsync($"data: Total time spent {stopwatch.ElapsedMilliseconds} ms\r\r");
         }
     }
 }
