@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace BLL.Implementation
 {
@@ -21,7 +22,7 @@ namespace BLL.Implementation
             this.urlFilter = urlFilter;
         }
 
-        public async Task<RecordDto> CrawlWebsiteAsync(string startUrl)
+        public async Task<RecordDto> CrawlWebsiteAsync(string startUrl, BlockingCollection<RecordItemDto> blockingCollection)
         {
             if (!Uri.IsWellFormedUriString(startUrl, UriKind.Absolute))
                 throw new UriFormatException("Url in not valid");
@@ -34,6 +35,9 @@ namespace BLL.Implementation
 
             pagesToBeCalled.Enqueue(startUri);
 
+            
+
+            // TODO: Extract to factory service
             result.RequestedUrl = startUrl;
             result.RecordCreated = DateTime.UtcNow;
             result.Items = new List<RecordItemDto>();
@@ -54,6 +58,7 @@ namespace BLL.Implementation
                 recordItem.RequestUrl = currentUri.AbsolutePath;
                 recordItem.RequestTime = stopwath.Elapsed;
                 result.Items.Add(recordItem);
+                blockingCollection.Add(recordItem);
 
                 var parsedUrls = htmlParser.GetUrlsFromHtmlATag(content);
                 var filteredPaths = urlFilter.RemoveUnnecessary(parsedUrls, currentUri);
@@ -64,6 +69,8 @@ namespace BLL.Implementation
                         pagesToBeCalled.Enqueue(parsedUri);
                 }
             }
+
+            blockingCollection.CompleteAdding();
 
             return result;
         }

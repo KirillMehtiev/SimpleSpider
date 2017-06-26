@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.8.0-preview1-25305-02" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DLL\DLL.csproj" />
   </ItemGroup>
 
