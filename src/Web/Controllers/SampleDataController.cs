@@ -9,13 +9,21 @@ using BLL.Dtos;
 using BLL.Abstractions;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Web.Controllers
 {
     [Route("api/[controller]")]
     public class SampleDataController : Controller
     {
+        private static ConcurrentDictionary<Guid, CancellationTokenSource> cansellationTokens;
+
         private readonly ISpiderService spiderService;
+
+        static SampleDataController()
+        {
+            cansellationTokens = new ConcurrentDictionary<Guid, CancellationTokenSource>();
+        }
 
         public SampleDataController(ISpiderService spiderService)
         {
@@ -63,14 +71,20 @@ namespace Web.Controllers
             var response = HttpContext.Response;
             response.ContentType = "text/event-stream";
 
+            var id = Guid.NewGuid();
             var blockingCollection = new BlockingCollection<RecordItemDto>(100);
+            var cts = new CancellationTokenSource();
 
-            var task = spiderService.CrawlWebsiteAsync(url, blockingCollection);
+            var task = spiderService.CrawlWebsiteAsync(url, blockingCollection, cts.Token);
+            cansellationTokens.TryAdd(id, cts);
+
+            await response
+                    .WriteAsync($"id: {id}\r\r");
 
             foreach (var item in blockingCollection.GetConsumingEnumerable())
             {
                 await response
-                    .WriteAsync($"data: requested {item.RequestUrl} at {item.RequestTime.Milliseconds} ms\r\r");
+                    .WriteAsync($"data: requested {item.RequestUrl} in {item.RequestTime.Milliseconds} ms\r\r");
 
                 response.Body.Flush();
 
@@ -79,9 +93,18 @@ namespace Web.Controllers
 
             await task;
             stopwatch.Stop();
+            cts.Dispose();
 
             await response
-                    .WriteAsync($"data: Total time spent {stopwatch.ElapsedMilliseconds} ms\r\r");
+                    .WriteAsync($"data: Total time spent {stopwatch.Elapsed.ToString(@"hh\:mm\:ss")} ms\r\r");
+        }
+
+        [HttpGet("[action]")]
+        public async Task SseCansell(Guid key)
+        {
+            var cts = new CancellationTokenSource();
+            if (cansellationTokens.TryGetValue(key, out cts))
+                cts.Cancel();
         }
     }
 }

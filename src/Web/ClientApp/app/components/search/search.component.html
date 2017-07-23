@@ -6,6 +6,11 @@
     <div class="form-group">
         <input type="url" [(ngModel)]="url" placeholder="http://www.example.com" class="form-control input-lg" />
     </div>
-    <a (click)="find()" class="btn btn-primary btn-lg">Go!</a>
+    <span *ngIf="!isWorking">
+        <a (click)="find()" class="btn btn-primary btn-lg">Go!</a>
+    </span>
+    <span *ngIf="isWorking">
+        <a (click)="cansel()" class="btn btn-danger btn-lg">Cansel</a>
+    </span>
 </div>
 

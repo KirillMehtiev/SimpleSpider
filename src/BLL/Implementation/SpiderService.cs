@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace BLL.Implementation
 {
@@ -22,7 +23,7 @@ namespace BLL.Implementation
             this.urlFilter = urlFilter;
         }
 
-        public async Task<RecordDto> CrawlWebsiteAsync(string startUrl, BlockingCollection<RecordItemDto> blockingCollection)
+        public async Task<RecordDto> CrawlWebsiteAsync(string startUrl, BlockingCollection<RecordItemDto> blockingCollection, CancellationToken cancellationToken)
         {
             if (!Uri.IsWellFormedUriString(startUrl, UriKind.Absolute))
                 throw new UriFormatException("Url in not valid");
@@ -35,14 +36,13 @@ namespace BLL.Implementation
 
             pagesToBeCalled.Enqueue(startUri);
 
-            
-
             // TODO: Extract to factory service
             result.RequestedUrl = startUrl;
             result.RecordCreated = DateTime.UtcNow;
             result.Items = new List<RecordItemDto>();
 
-            while (pagesToBeCalled.Any())
+
+            while (pagesToBeCalled.Any() && !cancellationToken.IsCancellationRequested)
             {
                 var recordItem = new RecordItemDto();
                 var currentUri = pagesToBeCalled.Dequeue();
